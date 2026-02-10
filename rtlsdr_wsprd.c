@@ -107,6 +107,9 @@ struct receiver_options {
     bool     writefile;
     bool     readfile;
     char     *filename;
+    bool     logfile;
+    char     logformat;     // 'c' for CSV, 't' for TSV
+    char     *logfilename;
 };
 
 
@@ -116,6 +119,9 @@ struct receiver_options rx_options;
 struct decoder_options  dec_options;
 struct decoder_results  dec_results[50];
 
+
+/* Forward declaration */
+void logSpots(uint32_t n_results);
 
 /* Could be nice to update this one with the CI */
 const char rtlsdr_wsprd_version[] = "0.5.6";
@@ -323,6 +329,7 @@ static void *decoder(void *arg) {
         saveSample(rx_state.iSamples[prevBuffer], rx_state.qSamples[prevBuffer]);
         postSpots(n_results);
         printSpots(n_results);
+        logSpots(n_results);
     }
     return NULL;
 }
@@ -351,6 +358,9 @@ void initrx_options() {
     rx_options.writefile      = false;
     rx_options.readfile       = false;
     rx_options.noreport       = false;
+    rx_options.logfile        = false;
+    rx_options.logformat      = 0;
+    rx_options.logfilename    = NULL;
 }
 
 /* Default options for the decoder */
@@ -462,6 +472,62 @@ void printSpots(uint32_t n_results) {
                dec_results[i].loc,
                dec_results[i].pwr);
     }
+}
+
+
+void logSpots(uint32_t n_results) {
+    if (!rx_options.logfile || n_results == 0)
+        return;
+
+    char sep = (rx_options.logformat == 't') ? '\t' : ',';
+
+    /* Check if the file already exists and has content (to decide on header) */
+    bool write_header = false;
+    FILE *fp = fopen(rx_options.logfilename, "r");
+    if (fp == NULL) {
+        write_header = true;
+    } else {
+        fseek(fp, 0, SEEK_END);
+        if (ftell(fp) == 0)
+            write_header = true;
+        fclose(fp);
+    }
+
+    fp = fopen(rx_options.logfilename, "a");
+    if (fp == NULL) {
+        fprintf(stderr, "Error: could not open log file '%s'\n", rx_options.logfilename);
+        return;
+    }
+
+    if (write_header)
+        fprintf(fp, "date%ctime%csnr%cdt%cfreq%cdrift%ccall%cloc%cpwr\n",
+                sep, sep, sep, sep, sep, sep, sep, sep);
+
+    for (uint32_t i = 0; i < n_results; i++) {
+        fprintf(fp, "%04d-%02d-%02d%c%02d%02d%c%.2f%c%.2f%c%.6f%c%d%c%s%c%s%c%s\n",
+                rx_state.gtm->tm_year + 1900,
+                rx_state.gtm->tm_mon + 1,
+                rx_state.gtm->tm_mday,
+                sep,
+                rx_state.gtm->tm_hour,
+                rx_state.gtm->tm_min,
+                sep,
+                dec_results[i].snr,
+                sep,
+                dec_results[i].dt,
+                sep,
+                dec_results[i].freq,
+                sep,
+                (int)dec_results[i].drift,
+                sep,
+                dec_results[i].call,
+                sep,
+                dec_results[i].loc,
+                sep,
+                dec_results[i].pwr);
+    }
+
+    fclose(fp);
 }
 
 
@@ -690,6 +756,12 @@ void decodeRecordedFile(char *filename) {
                    dec_results[i].loc,
                    dec_results[i].pwr);
         }
+
+        /* Log spots to file if requested */
+        time_t unixtime;
+        time(&unixtime);
+        rx_state.gtm = gmtime(&unixtime);
+        logSpots(n_results);
     }
 }
 
@@ -769,6 +841,12 @@ int32_t decoderSelfTest() {
                dec_results[i].pwr);
     }
 
+    /* Log spots to file if requested */
+    time_t unixtime;
+    time(&unixtime);
+    rx_state.gtm = gmtime(&unixtime);
+    logSpots(n_results);
+
     /* Simple consistency check */
     if (strcmp(dec_results[0].call, "K1JT") &&
         strcmp(dec_results[0].loc,  "FN20") &&
@@ -803,6 +881,8 @@ void usage(FILE *stream, int32_t status) {
             "\t-Q quick mode, doesn't dig deep for weak signals, no parameter\n"
             "\t-S single pass mode, no subtraction (same as original wsprd), no parameter\n"
             "\t-x do not report any spots on web clusters (WSPRnet, PSKreporter...)\n"
+            "Logging options:\n"
+            "\t-F log spots to file [format:filename] (e.g., -F csv:spots.csv or -F tsv:spots.tsv)\n"
             "Debugging options:\n"
             "\t-t decoder self-test (generate a signal & decode), no parameter\n"
             "\t-w write received signal and exit [filename prefix]\n"
@@ -819,7 +899,7 @@ void usage(FILE *stream, int32_t status) {
 
 int main(int argc, char **argv) {
     uint32_t opt;
-    char    *short_options = "f:c:l:g:ao:p:u:d:n:i:tw:r:HQSx";
+    char    *short_options = "f:c:l:g:ao:p:u:d:n:i:tw:r:F:HQSx";
     int32_t  option_index = 0;
     struct option long_options[] = {
         {"help",    no_argument, 0, 0 },
@@ -971,6 +1051,20 @@ int main(int argc, char **argv) {
             case 'r':  // Read a signal and decode
                 rx_options.readfile = true;
                 rx_options.filename = optarg;
+                break;
+            case 'F':  // Log spots to file (csv:filename or tsv:filename)
+                if (strncasecmp(optarg, "csv:", 4) == 0) {
+                    rx_options.logfile = true;
+                    rx_options.logformat = 'c';
+                    rx_options.logfilename = optarg + 4;
+                } else if (strncasecmp(optarg, "tsv:", 4) == 0) {
+                    rx_options.logfile = true;
+                    rx_options.logformat = 't';
+                    rx_options.logfilename = optarg + 4;
+                } else {
+                    fprintf(stderr, "Invalid log format. Use -F csv:filename or -F tsv:filename\n");
+                    return EXIT_FAILURE;
+                }
                 break;
             default:
                 usage(stderr, EXIT_FAILURE);

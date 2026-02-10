@@ -93,6 +93,12 @@ This application written in C does:
   7. Finally, start the application with the right parameters/options for you (frequency, callsign, locator etc... Fake example below):
      ```bash
      rtlsdr_wsprd -f 2m -c A1XYZ -l AB12cd -g 29
+
+     # Log spots to CSV
+     rtlsdr_wsprd -f 20m -c MYCALL -l AB12cd -F csv:spots.csv
+
+     # Log spots to TSV
+     rtlsdr_wsprd -f 20m -c MYCALL -l AB12cd -F tsv:spots.tsv
      ```
 
 ## Container Image
@@ -147,5 +153,5 @@ Some performance tests using:
 | RPi-1         | :heavy_check_mark: | 23.2%   | 8.4s         |
 | RPi-2         | :heavy_check_mark: | 13.5%   | 4.1s         |
 | RPi-3         | :heavy_check_mark: | 10.9%   | 2.1s         |
-| RPi-4         | :heavy_check_mark: |  5.8%   | 1.1s         |
-| PC (i7-5820K) | :heavy_check_mark: |  1.7%   | 0.5s         |
+| RPi-4         | :heavy_check_mark: | 5.8%    | 1.1s         |
+| PC (i7-5820K) | :heavy_check_mark: | 1.7%    | 0.5s         |
