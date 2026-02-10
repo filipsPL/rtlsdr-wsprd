@@ -124,8 +124,8 @@ struct decoder_results  dec_results[50];
 void logSpots(uint32_t n_results);
 
 /* Could be nice to update this one with the CI */
-const char rtlsdr_wsprd_version[] = "0.5.6";
-const char wsprnet_app_version[]  = "rtlsdr-056";  // 10 chars max.!
+const char rtlsdr_wsprd_version[] = "0.5.7";
+const char wsprnet_app_version[]  = "rtlsdr-057";  // 10 chars max.!
 
 
 /* Callback for each buffer received */
