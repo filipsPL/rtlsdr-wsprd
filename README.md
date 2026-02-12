@@ -1,11 +1,9 @@
-# rtlsdr-wsprd -- WSPR daemon for RTL receivers
+> [!IMPORTANT]
+> This is a fork of the [original repo](https://github.com/Guenael/rtlsdr-wsprd) by Guenael, with one single enchancement - enabled logging to csv/tsv file.
+> The log file can be later analyzed by the external software, such as [the one I created for that purpose](https://github.com/filipsPL/rtlsdr-wsprd-report).
+> That repo contains also a simple bash loop script to execute `rtlsdr-wsprd` in a loop with band hopping. Enjoy Filip SP5FLS
 
-![rtlsdr-wsprd](art/rtlsdr-wsprd-web.jpg)
-
-![Project Status](https://img.shields.io/badge/status-OK-green)
-[![CI Status](https://github.com/Guenael/rtlsdr-wsprd/actions/workflows/ci.yml/badge.svg)](https://github.com/Guenael/rtlsdr-wsprd/actions/workflows/ci.yml)
-![Last commit](https://img.shields.io/github/last-commit/Guenael/rtlsdr-wsprd)
-![Commit activity](https://img.shields.io/github/commit-activity/m/Guenael/rtlsdr-wsprd)
+# rtlsdr-wsprd -- WSPR daemon for RTL receivers (fork)
 
 ## TL;DR
 
